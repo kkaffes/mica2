@@ -10,6 +10,13 @@
 #include "mica/processor/types.h"
 #include "mica/table/types.h"
 
+#define ETHER_TYPE_IPv4 RTE_ETHER_TYPE_IPV4
+#define ETHER_CRC_LEN RTE_ETHER_CRC_LEN
+
+typedef rte_ether_hdr ether_hdr;
+typedef rte_ipv4_hdr ipv4_hdr;
+typedef rte_udp_hdr udp_hdr;
+
 namespace mica {
 namespace datagram {
 struct RequestBatchHeader {
@@ -92,7 +99,7 @@ class RequestBatchReader {
     }
 
     if (rte_be_to_cpu_16(udp->dgram_len) !=
-        len - sizeof(struct ether_hdr) - sizeof(ipv4_hdr)) {
+        len - sizeof(ether_hdr) - sizeof(ipv4_hdr)) {
       // printf("invalid UDP datagram length\n");
       return false;
     }

@@ -1,10 +1,4 @@
 {
-  "dir_client": {
-    "etcd_addr": "YOUR_ETCD_HOST",
-    "etcd_port": 50505
-    /*"verbose": true*/
-  },
-
   "alloc": {
     /*"num_pages_to_free": [1024, 1024]*/
     /*"num_pages_to_free": [1024]*/

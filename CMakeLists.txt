@@ -3,8 +3,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(MICA)
 
 
-SET(CMAKE_CXX_COMPILER g++-5)
-SET(CMAKE_C_LINK_EXECUTABLE g++-5)
+SET(CMAKE_CXX_COMPILER g++)
+SET(CMAKE_C_LINK_EXECUTABLE g++)
 
 
 
@@ -88,11 +88,11 @@ IF(DPDK)
   MESSAGE(STATUS "Intel DPDK support is enabled (to disable, run `cmake .. -DDPDK=OFF`)")
   set(RTE_SDK ${CMAKE_SOURCE_DIR}/build/dpdk)
   add_definitions(-DUSE_DPDK)
-  add_definitions(-isystem ${RTE_SDK}/build/include -include rte_config.h)
-  link_directories(${LINK_DIRECTORIES} ${RTE_SDK}/build/lib)
+  add_definitions(-isystem ${RTE_SDK}/mybuild/include -include rte_config.h)
+  link_directories(${LINK_DIRECTORIES} ${RTE_SDK}/mybuild/lib)
   set(LIBRARIES ${LIBRARIES} -Wl,--whole-archive)
-  set(LIBRARIES ${LIBRARIES} rte_kvargs rte_mbuf rte_ethdev rte_mempool rte_ring rte_eal)
   set(LIBRARIES ${LIBRARIES} rte_pmd_i40e rte_pmd_ixgbe rte_pmd_ring)
+  set(LIBRARIES ${LIBRARIES} rte_mempool_ring rte_ethdev rte_mbuf rte_eal rte_mempool rte_ring rte_hash rte_net rte_bus_vdev rte_pci rte_bus_pci rte_kvargs)
   set(LIBRARIES ${LIBRARIES} -Wl,--no-whole-archive)
   set(LIBRARIES ${LIBRARIES} rt dl)
 

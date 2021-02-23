@@ -2,6 +2,10 @@
 #ifndef MICA_NETWORK_DPDK_IMPL_H_
 #define MICA_NETWORK_DPDK_IMPL_H_
 
+#include <rte_mbuf_pool_ops.h>
+
+#define ETHER_MAX_LEN RTE_ETHER_MAX_LEN
+
 namespace mica {
 namespace network {
 template <class StaticConfig>
@@ -21,7 +25,7 @@ DPDK<StaticConfig>::DPDK(const ::mica::util::Config& config)
   init_eal(core_mask);
 
   {
-    uint16_t num_ports = rte_eth_dev_count();
+    uint16_t num_ports = rte_eth_dev_count_avail();
     if (StaticConfig::kVerbose)
       printf("total %" PRIu16 " ports available\n", num_ports);
 
@@ -330,8 +334,8 @@ void DPDK<StaticConfig>::start() {
   //eth_conf.link_speeds = ETH_LINK_SPEED_10G;
   eth_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
   eth_conf.rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
-  eth_conf.rxmode.hw_vlan_filter = 1;
-  eth_conf.rxmode.hw_vlan_strip = 1;
+  //eth_conf.rxmode.hw_vlan_filter = 1;
+  //eth_conf.rxmode.hw_vlan_strip = 1;
   eth_conf.txmode.mq_mode = ETH_MQ_TX_NONE;
   eth_conf.fdir_conf.mode = RTE_FDIR_MODE_PERFECT;
   eth_conf.fdir_conf.pballoc = RTE_FDIR_PBALLOC_64K;
@@ -350,8 +354,8 @@ void DPDK<StaticConfig>::start() {
   eth_tx_conf.tx_thresh.wthresh = 0;
   eth_tx_conf.tx_free_thresh = 0;
   eth_tx_conf.tx_rs_thresh = 0;
-  eth_tx_conf.txq_flags = (ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOREFCOUNT |
-                           ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOOFFLOADS);
+  //eth_tx_conf.txq_flags = (ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOREFCOUNT |
+  //                         ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOOFFLOADS);
 
   int ret;
 

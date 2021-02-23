@@ -214,6 +214,7 @@ void benchmark(double zipf_theta) {
   size_t value_length = ::mica::util::roundup<8>(sizeof(uint64_t));
 
   PartitionsConfig::Alloc alloc(config.get("alloc"));
+  printf("1\n");
 
   char* keys =
       reinterpret_cast<char*>(alloc.malloc_striped(key_length * num_items * 2));

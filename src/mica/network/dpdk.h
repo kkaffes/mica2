@@ -19,6 +19,8 @@
 #include "mica/network/packet_io.h"
 #include "mica/network/network_addr.h"
 
+typedef rte_ether_addr ether_addr;
+
 // Configuration file entries for DPDK:
 //
 //  * lcores (array): A list of lcore IDs to allow using with DPDK EAL.

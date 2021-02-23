@@ -54,6 +54,7 @@
 #define __ETCD_HPP_INCLUDED__
 
 #include <curl/curl.h>
+#include <functional>
 #include <map>
 #include <memory>
 #include <sstream>

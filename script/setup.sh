@@ -120,21 +120,21 @@ create_mnt_huge()
 
 set_numa_pages()
 {
-	clear_huge_pages
+	#clear_huge_pages
 
-	echo "Reserving hugepages"
+	#echo "Reserving hugepages"
 
-	for d in /sys/devices/system/node/node? ; do
-		echo > .echo_tmp
-		node=$(basename $d)
-		Pages=$1
-		echo -n "Number of pages for $node: $Pages requested, "
-		shift
-		echo "echo $Pages > $d/hugepages/hugepages-2048kB/nr_hugepages" >> .echo_tmp
-	    sudo sh .echo_tmp
-	    echo "$(cat "$d/hugepages/hugepages-2048kB/nr_hugepages") actual"
-	done
-	rm -f .echo_tmp
+	#for d in /sys/devices/system/node/node? ; do
+	#	echo > .echo_tmp
+	#	node=$(basename $d)
+	#	Pages=$1
+	#	echo -n "Number of pages for $node: $Pages requested, "
+	#	shift
+	#	echo "echo $Pages > $d/hugepages/hugepages-2048kB/nr_hugepages" >> .echo_tmp
+	#    sudo sh .echo_tmp
+	#    echo "$(cat "$d/hugepages/hugepages-2048kB/nr_hugepages") actual"
+	#done
+	#rm -f .echo_tmp
 
 	create_mnt_huge
 }

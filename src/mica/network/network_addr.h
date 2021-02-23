@@ -2,6 +2,8 @@
 #ifndef MICA_NETWORK_ADDR_H_
 #define MICA_NETWORK_ADDR_H_
 
+typedef rte_ether_addr ether_addr;
+
 namespace mica {
 namespace network {
 class NetworkAddress {
