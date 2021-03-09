@@ -1,1 +1,0 @@
-MICA ported to DPDK v19.11 built using https://doc.dpdk.org/guides-19.11/linux_gsg/build_dpdk.html#installation-of-dpdk-target-environment-using-make
