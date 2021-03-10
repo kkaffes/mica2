@@ -1,7 +1,7 @@
 {
   "dir_client": {
-    "etcd_addr": "YOUR_ETCD_HOST",
-    "etcd_port": 50505
+    "etcd_addr": "172.24.90.67",
+    "etcd_port": 2379
     /*"verbose": true*/
   },
 
@@ -16,7 +16,7 @@
     "lcores": [0],
 
     "ports": [
-      {"port_id": 0, "ipv4_addr": "10.0.1.1"}
+      {"port_id": 0, "ipv4_addr": "10.10.10.104"}
       /*{"port_id": 1, "ipv4_addr": "10.0.1.2"},
       {"port_id": 2, "ipv4_addr": "10.0.1.3"},
       {"port_id": 3, "ipv4_addr": "10.0.1.4"},

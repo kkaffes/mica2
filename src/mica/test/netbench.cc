@@ -5,13 +5,13 @@
 
 typedef ::mica::alloc::HugeTLBFS_SHM Alloc;
 
-struct DPDKConfig : public ::mica::network::BasicDPDKConfig {
+struct AFXDPConfig : public ::mica::network::BasicAFXDPConfig {
   static constexpr bool kVerbose = true;
 };
 
 struct DatagramClientConfig
     : public ::mica::datagram::BasicDatagramClientConfig {
-  typedef ::mica::network::DPDK<DPDKConfig> Network;
+  typedef ::mica::network::AFXDP<AFXDPConfig> Network;
   // static constexpr bool kSkipRX = true;
   // static constexpr bool kIgnoreServerPartition = true;
   // static constexpr bool kVerbose = true;

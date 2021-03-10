@@ -6,7 +6,7 @@
 #include <thread>
 #include "mica/util/config.h"
 #include "mica/processor/partitions.h"
-#include "mica/network/dpdk.h"
+#include "mica/network/af_xdp.h"
 #include "mica/directory/directory_client.h"
 #include "mica/util/stopwatch.h"
 #include "mica/datagram/datagram_protocol.h"
@@ -30,7 +30,7 @@ struct BasicDatagramServerConfig {
   typedef ::mica::processor::Partitions<> Processor;
 
   // The network type.
-  typedef ::mica::network::DPDK<> Network;
+  typedef ::mica::network::AFXDP<> Network;
 
   // The maximum number of LCore to support.
   // static constexpr size_t kMaxLCoreCount = 64;

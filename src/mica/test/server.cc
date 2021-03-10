@@ -1,7 +1,7 @@
 #include "mica/datagram/datagram_server.h"
 #include "mica/util/lcore.h"
 
-struct DPDKConfig : public ::mica::network::BasicDPDKConfig {
+struct AFXDPConfig : public ::mica::network::BasicAFXDPConfig {
   static constexpr bool kVerbose = true;
 };
 
@@ -13,7 +13,7 @@ struct PartitionsConfig : public ::mica::processor::BasicPartitionsConfig {
 struct DatagramServerConfig
     : public ::mica::datagram::BasicDatagramServerConfig {
   typedef ::mica::processor::Partitions<PartitionsConfig> Processor;
-  typedef ::mica::network::DPDK<DPDKConfig> Network;
+  typedef ::mica::network::AFXDP<AFXDPConfig> Network;
   // static constexpr bool kVerbose = true;
 };
 

@@ -23,7 +23,7 @@ namespace mica {
 namespace datagram {
 struct BasicDatagramClientConfig {
   // The network type.
-  typedef ::mica::network::DPDK<> Network;
+  typedef ::mica::network::AFXDP<> Network;
 
   // User argument type for requsts.
   typedef struct {
