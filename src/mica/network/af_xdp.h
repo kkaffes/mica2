@@ -20,6 +20,8 @@
 #include "mica/network/packet_io.h"
 #include "mica/network/network_addr.h"
 
+#include "bpf/xsk.h"
+
 typedef rte_ether_addr ether_addr;
 
 // Configuration file entries for DPDK:
@@ -59,6 +61,21 @@ struct BasicAFXDPConfig {
 
   // Be verbose.
   static constexpr bool kVerbose = false;
+};
+
+struct xsk_umem_info {
+  struct xsk_ring_prod fq;
+  struct xsk_ring_cons cq;
+  struct xsk_umem *umem;
+  void *buffer;
+};
+
+struct xsk_socket_info {
+  struct xsk_ring_cons rx;
+  struct xsk_ring_prod tx;
+  struct xsk_umem_info *umem;
+  struct xsk_socket *xsk;
+  uint32_t outstanding_tx;
 };
 
 template <class StaticConfig = BasicAFXDPConfig>
@@ -144,6 +161,10 @@ class AFXDP : public PacketIOInterface {
   void init_eal(uint64_t core_mask);
   void init_mempool();
 
+  static struct xsk_umem_info *xsk_configure_umem(void *buffer, uint64_t size);
+  static void xsk_populate_fill_ring(struct xsk_umem_info *umem);
+  struct xsk_socket_info *xsk_configure_socket(
+      struct xsk_umem_info *umem, bool rx, bool tx);
   static uint16_t get_port_numa_id(uint16_t port_id);
 
   void add_endpoint(uint16_t lcore_id, uint16_t port_id);
@@ -153,6 +174,7 @@ class AFXDP : public PacketIOInterface {
 
     ether_addr mac_addr;
     uint32_t ipv4_addr;
+    uint32_t ifindex;
     uint16_t numa_id;
 
     uint16_t max_queue_count;
@@ -164,6 +186,7 @@ class AFXDP : public PacketIOInterface {
 
   rte_mempool* mempools_[StaticConfig::kMaxNUMACount];
   std::vector<Port> ports_;
+  Port port_;
 
   uint16_t endpoint_count_;
   EndpointInfo endpoint_info_[StaticConfig::kMaxEndpointCount];

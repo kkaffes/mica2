@@ -38,6 +38,11 @@
     /*"lcores": [0, 2],*/
     "lcores": [0, 1],
 
+    "port": {
+      "ifname": "enp94s0np0np0",
+      "ipv4_addr": "10.10.10.103"
+    },
+
     "ports": [
       {"port_id": 0, "ipv4_addr": "10.0.0.1"}
       /*{"port_id": 1, "ipv4_addr": "10.0.0.2"},

@@ -84,6 +84,7 @@ ENDIF(LTO)
 
 set(LIBBPF ${CMAKE_SOURCE_DIR}/../syrup/bpf/libbpf)
 INCLUDE_DIRECTORIES(${LIBBPF}/src/build/usr/include)
+INCLUDE_DIRECTORIES(${LIBBPF}/include/uapi)
 
 ADD_LIBRARY(libbpf STATIC IMPORTED)
 SET_TARGET_PROPERTIES(libbpf PROPERTIES
@@ -136,7 +137,7 @@ SET(SOURCES ${SOURCES} src/mica/util/stopwatch.cc)
 SET(SOURCES ${SOURCES} src/mica/util/zipf.cc)
 
 SET(LIBRARIES ${LIBRARIES} rt numa pthread)
-SET(LIBRARIES ${LIBRARIES} curl)
+SET(LIBRARIES ${LIBRARIES} curl elf)
 # SET(LIBRARIES ${LIBRARIES} boost_coroutine boost_system)
 
 

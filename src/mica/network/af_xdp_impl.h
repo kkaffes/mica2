@@ -3,19 +3,107 @@
 #define MICA_NETWORK_AF_XDP_IMPL_H_
 
 #include <rte_mbuf_pool_ops.h>
+#include <linux/if_xdp.h>
+#include <net/if.h>
+#include <sys/mman.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
+#include <poll.h>
+
+#include <cerrno>
+
+#include "bpf/xsk.h"
 
 #define ETHER_MAX_LEN RTE_ETHER_MAX_LEN
+
+#define NUM_FRAMES (4 * 1024)
+
+#define XDP_FLAGS_SKB_MODE         (1U << 1)
+#define XDP_FLAGS_UPDATE_IF_NOEXIST        (1U << 0)
+
+static int opt_xsk_frame_size = XSK_UMEM__DEFAULT_FRAME_SIZE;
+static int opt_ifindex;
+static uint32_t opt_umem_flags;
+static uint32_t prog_id;
 
 namespace mica {
 namespace network {
 template <class StaticConfig>
 AFXDP<StaticConfig>::AFXDP(const ::mica::util::Config& config)
     : config_(config), rte_argc_(0), endpoint_count_(0), started_(false) {
-  for (uint16_t numa_id = 0; numa_id < StaticConfig::kMaxNUMACount; numa_id++)
-    mempools_[numa_id] = nullptr;
+  struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
+  if (setrlimit(RLIMIT_MEMLOCK, &r)) {
+    std::cerr << "setrlimit(RLIMIT_MEMLOCK) failed" << std::endl;
+    exit(-1);
+  }
+  for (uint16_t socket_id = 0; socket_id < StaticConfig::kMaxNUMACount; socket_id++)
+    mempools_[socket_id] = nullptr;
 
-  assert(::mica::util::lcore.numa_count() <= StaticConfig::kMaxNUMACount);
+  auto port_conf = config_.get("port");
+  // TODO Check for error.
+  port_.ifindex = if_nametoindex(port_conf.get("ifname").get_str().c_str());
+  port_.valid = true;
+  uint32_t ipv4_addr = NetworkAddress::parse_ipv4_addr(
+    port_conf.get("ipv4_addr").get_str().c_str());
+  port_.ipv4_addr = ipv4_addr;
 
+  void *bufs = mmap(NULL, NUM_FRAMES * opt_xsk_frame_size,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1 ,0);
+  if (bufs == MAP_FAILED) {
+    std::cerr << "mmap failed" << std::endl;
+    exit(-1);
+  }
+
+  struct xsk_umem_info *umem;
+  umem = xsk_configure_umem(bufs, NUM_FRAMES * opt_xsk_frame_size);
+
+  xsk_populate_fill_ring(umem);
+
+  struct xsk_socket_info * xsk;
+  xsk = xsk_configure_socket(umem, true, false);
+
+  struct pollfd poll_fd = {};
+  poll_fd.fd = xsk_socket__fd(xsk->xsk);
+  poll_fd.events = POLLIN;
+
+  uint32_t rcvd;
+  uint32_t idx_rx = 0, idx_fq = 0;
+  while (1) {
+    rcvd = xsk_ring_cons__peek(&xsk->rx, 1, &idx_rx);
+    if (!rcvd) {
+      if (xsk_ring_prod__needs_wakeup(&xsk->umem->fq)) {
+        std::cout << "Needs wake-up\n";
+        poll(&poll_fd, 1, 1000000);
+      }
+      continue;
+    }
+
+    int ret = xsk_ring_prod__reserve(&xsk->umem->fq, rcvd, &idx_fq);
+    while (ret != rcvd) {
+      ret = xsk_ring_prod__reserve(&xsk->umem->fq, rcvd, &idx_fq);
+    }
+
+    for (int i = 0; i < rcvd; i++) {
+     uint64_t addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
+     uint32_t len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
+     uint64_t orig = xsk_umem__extract_addr(addr);
+
+     addr = xsk_umem__add_offset_to_addr(addr);
+     char *pkt = (char *) xsk_umem__get_data(xsk->umem->buffer, addr);
+
+     std::cout << "Got " << rcvd << " packets" << std::endl;
+     //hex_dump(pkt, len, addr);
+     *xsk_ring_prod__fill_addr(&xsk->umem->fq, idx_fq++) = orig;
+   }
+
+   xsk_ring_prod__submit(&xsk->umem->fq, rcvd);
+   xsk_ring_cons__release(&xsk->rx, rcvd);
+  }
+  printf("Before infinite loop\n");
+  while(1);
+  /*
   uint64_t core_mask = 0;
   auto lcores_conf = config_.get("lcores");
   for (size_t i = 0; i < lcores_conf.size(); i++) {
@@ -23,7 +111,8 @@ AFXDP<StaticConfig>::AFXDP(const ::mica::util::Config& config)
     core_mask |= uint64_t(1) << lcore_id;
   }
   init_eal(core_mask);
-
+  */
+  /*
   {
     uint16_t num_ports = rte_eth_dev_count_avail();
     if (StaticConfig::kVerbose)
@@ -32,9 +121,20 @@ AFXDP<StaticConfig>::AFXDP(const ::mica::util::Config& config)
     ports_.resize(num_ports);
     for (uint16_t port_id = 0; port_id < num_ports; port_id++)
       ports_[port_id].valid = false;
-  }
+  }*/
+
+  /*
+  auto port_conf = config_.get("port");
+  // TODO Check for error.
+  port_.ifindex = if_nametoindex(port_conf.get("ifname").get_str().c_str());
+  port_.valid = true;
+  uint32_t ipv4_addr = NetworkAddress::parse_ipv4_addr(
+    port_conf.get("ipv4_addr").get_str().c_str());
+  port_.ipv4_addr = ipv4_addr;
+  */
 
   // Parse configurations.
+  /*
   auto ports_conf = config_.get("ports");
   for (size_t i = 0; i < ports_conf.size(); i++) {
     auto port_conf = ports_conf.get(i);
@@ -60,7 +160,7 @@ AFXDP<StaticConfig>::AFXDP(const ::mica::util::Config& config)
     ports_[port_id].ipv4_addr = ipv4_addr;
     ports_[port_id].numa_id = numa_id;
     ports_[port_id].next_available_queue_id = 0;
-  }
+  }*/
 
   auto endpoints_conf = config_.get("endpoints");
   if (endpoints_conf.exists()) {
@@ -226,10 +326,93 @@ void AFXDP<StaticConfig>::init_eal(uint64_t core_mask) {
 }
 
 template <class StaticConfig>
+struct xsk_umem_info *
+AFXDP<StaticConfig>::xsk_configure_umem(void *buffer, uint64_t size)
+{
+  struct xsk_umem_info *umem;
+  struct xsk_umem_config cfg = {
+    .fill_size = XSK_RING_PROD__DEFAULT_NUM_DESCS,
+    .comp_size = XSK_RING_CONS__DEFAULT_NUM_DESCS,
+    .frame_size = opt_xsk_frame_size,
+    .frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
+    .flags = opt_umem_flags
+  };
+  int ret;
+
+  umem = (xsk_umem_info *)calloc(1, sizeof(*umem));
+  if (!umem)
+    exit(-1);
+
+  ret = xsk_umem__create(&umem->umem, buffer, size, &umem->fq, &umem->cq,
+             &cfg);
+  if (ret)
+    exit(-1);
+
+  umem->buffer = buffer;
+  return umem;
+}
+
+template <class StaticConfig>
+void AFXDP<StaticConfig>::xsk_populate_fill_ring(struct xsk_umem_info *umem)
+{
+  int ret, i;
+  uint32_t idx;
+
+  ret = xsk_ring_prod__reserve(&umem->fq,
+             XSK_RING_PROD__DEFAULT_NUM_DESCS, &idx);
+  if (ret != XSK_RING_PROD__DEFAULT_NUM_DESCS)
+    exit(-ret);
+  for (i = 0; i < XSK_RING_PROD__DEFAULT_NUM_DESCS; i++)
+    *xsk_ring_prod__fill_addr(&umem->fq, idx++) =
+      i * opt_xsk_frame_size;
+  xsk_ring_prod__submit(&umem->fq, XSK_RING_PROD__DEFAULT_NUM_DESCS);
+}
+
+template <class StaticConfig>
+struct xsk_socket_info *
+AFXDP<StaticConfig>::xsk_configure_socket(struct xsk_umem_info *umem,
+                                          bool rx, bool tx)
+{
+  struct xsk_socket_config cfg;
+  struct xsk_socket_info *xsk;
+  struct xsk_ring_cons *rxr;
+  struct xsk_ring_prod *txr;
+  int ret;
+
+  xsk = (struct xsk_socket_info *) calloc(1, sizeof(*xsk));
+  if (!xsk)
+    exit(-1);
+
+  xsk->umem = umem;
+  cfg.rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS;
+  cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
+  cfg.libbpf_flags = 0;
+  //XSK_LIBBPF_FLAGS__INHIBIT_PROG_LOAD;
+  cfg.xdp_flags = XDP_FLAGS_SKB_MODE | XDP_FLAGS_UPDATE_IF_NOEXIST;//;opt_xdp_flags;
+  cfg.bind_flags = XDP_COPY;//;opt_xdp_bind_flags;
+
+  rxr = rx ? &xsk->rx : NULL;
+  txr = tx ? &xsk->tx : NULL;
+  ret = xsk_socket__create(
+      &xsk->xsk, config_.get("port").get("ifname").get_str().c_str(), 0,
+      umem->umem, rxr, txr, &cfg);
+  if (ret) {
+    std::cout << "xsk_socket__create: " << std::strerror(errno) << '\n';
+    exit(-ret);
+  }
+
+  /*
+  ret = bpf_get_link_xdp_id(port_.ifindex, &prog_id, 0);
+  if (ret)
+    exit(-ret);
+  */
+  return xsk;
+}
+
+template <class StaticConfig>
 void AFXDP<StaticConfig>::init_mempool() {
   // Initialize mempool.  Note that mempool will not be freed because DPDK
   // does not support it.
-
   size_t mbuf_entry_size =
       2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
   size_t desc_per_queue = StaticConfig::kRXDescCount +
@@ -536,10 +719,13 @@ typename AFXDP<StaticConfig>::PacketBuffer* AFXDP<StaticConfig>::allocate() {
 template <class StaticConfig>
 typename AFXDP<StaticConfig>::PacketBuffer* AFXDP<StaticConfig>::clone(
     PacketBuffer* buf) {
+  return nullptr;
+  /*
   assert(buf);
   return reinterpret_cast<PacketBuffer*>(
       rte_pktmbuf_clone(reinterpret_cast<rte_mbuf*>(buf),
                         mempools_[ ::mica::util::lcore.numa_id()]));
+  */
 }
 
 template <class StaticConfig>
