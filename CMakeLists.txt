@@ -136,7 +136,7 @@ SET(SOURCES ${SOURCES} src/mica/util/lcore.cc)
 SET(SOURCES ${SOURCES} src/mica/util/stopwatch.cc)
 SET(SOURCES ${SOURCES} src/mica/util/zipf.cc)
 
-SET(LIBRARIES ${LIBRARIES} rt numa pthread)
+SET(LIBRARIES ${LIBRARIES} rt numa pthread z)
 SET(LIBRARIES ${LIBRARIES} curl elf)
 # SET(LIBRARIES ${LIBRARIES} boost_coroutine boost_system)
 

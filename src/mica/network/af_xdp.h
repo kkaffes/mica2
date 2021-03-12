@@ -82,6 +82,8 @@ template <class StaticConfig = BasicAFXDPConfig>
 class AFXDP : public PacketIOInterface {
  public:
   struct PacketBuffer : public rte_mbuf {
+   //uint16_t length;
+   //uint64_t
    public:
     uint16_t get_length() const { return rte_pktmbuf_data_len(this); }
     uint16_t get_headroom() const { return rte_pktmbuf_headroom(this); }
@@ -130,6 +132,9 @@ class AFXDP : public PacketIOInterface {
     // UDP port for flow direction.
     uint16_t udp_port;
 
+    // AF_XDP socket.
+    struct xsk_socket_info * xsk;
+
    private:
     friend AFXDP<StaticConfig>;
 
@@ -159,15 +164,15 @@ class AFXDP : public PacketIOInterface {
   ::mica::util::Config config_;
 
   void init_eal(uint64_t core_mask);
-  void init_mempool();
+  void init_umems();
 
   static struct xsk_umem_info *xsk_configure_umem(void *buffer, uint64_t size);
   static void xsk_populate_fill_ring(struct xsk_umem_info *umem);
   struct xsk_socket_info *xsk_configure_socket(
-      struct xsk_umem_info *umem, bool rx, bool tx);
+      struct xsk_umem_info *umem, uint32_t queue_id,bool rx, bool tx);
   static uint16_t get_port_numa_id(uint16_t port_id);
 
-  void add_endpoint(uint16_t lcore_id, uint16_t port_id);
+  void add_endpoint(uint16_t lcore_id);
 
   struct Port {
     uint8_t valid;
@@ -185,6 +190,7 @@ class AFXDP : public PacketIOInterface {
   char* rte_argv_[100];
 
   rte_mempool* mempools_[StaticConfig::kMaxNUMACount];
+  struct xsk_umem_info* umems_[StaticConfig::kMaxEndpointCount];
   std::vector<Port> ports_;
   Port port_;
 
