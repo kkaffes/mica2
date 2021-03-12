@@ -76,32 +76,53 @@ struct xsk_socket_info {
   struct xsk_umem_info *umem;
   struct xsk_socket *xsk;
   uint32_t outstanding_tx;
+  uint32_t idx_rx;
+  uint32_t idx_tx;
+  uint32_t idx_fq;
+  uint32_t idx_cq;
 };
 
 template <class StaticConfig = BasicAFXDPConfig>
 class AFXDP : public PacketIOInterface {
  public:
-  struct PacketBuffer : public rte_mbuf {
-   //uint16_t length;
-   //uint64_t
+  struct PacketBuffer {
+   uint32_t length;
+   uint64_t addr;
+   uint64_t orig;
+   struct xsk_socket_info * xsk;
    public:
-    uint16_t get_length() const { return rte_pktmbuf_data_len(this); }
-    uint16_t get_headroom() const { return rte_pktmbuf_headroom(this); }
-    uint16_t get_tailroom() const { return rte_pktmbuf_tailroom(this); }
+    uint32_t get_length() const {
+      return length;
+    }
+    uint16_t get_headroom() const {
+      assert(false);
+      return 0;
+    }
+    uint16_t get_tailroom() const {
+      assert(false);
+      return 0;
+    }
 
-    char* get_data() { return rte_pktmbuf_mtod(this, char*); }
-    const char* get_data() const { return rte_pktmbuf_mtod(this, const char*); }
+    char* get_data() {
+      uint64_t abs_addr = xsk_umem__add_offset_to_addr(addr);
+      return static_cast<char*>(xsk_umem__get_data(xsk->umem->buffer,
+                                                   abs_addr));
+    }
+
+    const char* get_data() const {
+      uint64_t abs_addr = xsk_umem__add_offset_to_addr(addr);
+      return static_cast<char*>(xsk_umem__get_data(xsk->umem->buffer,
+                                                   abs_addr));
+    }
 
     void set_length(uint16_t len) {
       // Assume a single segment packet (implied by ETH_TXQ_FLAGS_NOMULTSEGS).
-      assert(rte_pktmbuf_is_contiguous(this));
-      rte_pktmbuf_pkt_len(this) = rte_pktmbuf_data_len(this) = len;
-      assert(rte_pktmbuf_is_contiguous(this));
+      length = len;
     }
-    char* prepend(uint16_t len) { return rte_pktmbuf_prepend(this, len); }
-    char* append(uint16_t len) { return rte_pktmbuf_append(this, len); }
-    char* adj(uint16_t len) { return rte_pktmbuf_adj(this, len); }
-    char* trim(uint16_t len) { return rte_pktmbuf_trim(this, len); }
+    char* prepend(uint16_t len) { return nullptr; }
+    char* append(uint16_t len) { return nullptr; }
+    char* adj(uint16_t len) { return nullptr; }
+    char* trim(uint16_t len) { return nullptr; }
 
     PacketBuffer(const PacketBuffer& o) = delete;
     PacketBuffer& operator=(const PacketBuffer& o) = delete;
@@ -132,7 +153,7 @@ class AFXDP : public PacketIOInterface {
     // UDP port for flow direction.
     uint16_t udp_port;
 
-    // AF_XDP socket.
+    // Specific to AF_XDP.
     struct xsk_socket_info * xsk;
 
    private:
